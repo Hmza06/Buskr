@@ -28,7 +28,7 @@ export default function PerformerDashboard() {
     const start = new Date(session.started_at).getTime();
     const interval = setInterval(() => setElapsed(Math.floor((Date.now() - start) / 1000)), 1000);
     return () => clearInterval(interval);
-  }, [session?.id]);
+  }, [session]);
 
   useEffect(() => {
     if (!session) return;
@@ -41,7 +41,7 @@ export default function PerformerDashboard() {
       setTimeout(() => setNewTip(null), 3000);
     });
     return () => socketRef.current?.disconnect();
-  }, [session?.id]);
+  }, [session]);
 
   const endSession = async () => {
     if (!window.confirm('End this session?')) return;
