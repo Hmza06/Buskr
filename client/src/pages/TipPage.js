@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams , useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { io } from 'socket.io-client';
 import { API, SOCKET } from '../config';
@@ -21,6 +21,7 @@ export default function TipPage() {
   const [reactionSent, setReactionSent] = useState(null);
   const [floatingReactions, setFloatingReactions] = useState([]);
   const socketRef = useRef();
+  const navigate = useNavigate();
 
   useEffect(() => {
     axios.get(`${API}/performers/${performerId}`).then(r => setPerformer(r.data));
@@ -86,6 +87,9 @@ export default function TipPage() {
             </div>
           )}
           {!paypalUrl && !performer.venmo && <div style={{ background: '#111', border: '1px solid #1f1f1f', borderRadius: '16px', padding: '24px', textAlign: 'center' }}><p style={{ color: '#555', fontSize: '15px' }}>Ask {performer.name} how they'd like to receive your tip!</p></div>}
+          <button onClick={() => navigate('/map')} style={{ marginTop:'8px', width:'100%', padding:'16px', background:'rgba(255,255,255,0.04)', border:'1px solid #1a1a1a', borderRadius:'16px', color:'#555', fontSize:'15px', fontWeight:'500' }}>
+  🗺 Find other performers nearby
+</button>
         </div>
       </div>
     );
