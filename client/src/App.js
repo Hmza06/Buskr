@@ -1,25 +1,21 @@
-import logo from './logo.svg';
-import './App.css';
+import React from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import Home from './pages/Home';
+import PerformerSetup from './pages/PerformerSetup.js';
+import PerformerDashboard from './pages/PerformerDashboard';
+import TipPage from './pages/TipPage';
+import MapPage from './pages/MapPage';
 
-function App() {
+export default function App() {
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/setup" element={<PerformerSetup />} />
+        <Route path="/dashboard/:performerId" element={<PerformerDashboard />} />
+        <Route path="/tip/:performerId" element={<TipPage />} />
+        <Route path="/map" element={<MapPage />} />
+      </Routes>
+    </BrowserRouter>
   );
 }
-
-export default App;
