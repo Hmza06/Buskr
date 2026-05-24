@@ -183,7 +183,7 @@ export default function PerformerDashboard() {
             <p style={{ fontSize:'11px', color:'#2a2a2a', textTransform:'uppercase', letterSpacing:'0.1em', marginBottom:'16px', fontWeight:'600' }}>Live Feed</p>
             {tips.length === 0 ? (
               <div style={{ textAlign:'center', padding:'60px 20px', border:'1px dashed #141414', borderRadius:'20px' }}>
-                <p style={{ fontSize:'40px', marginBottom:'14px' }}>🎸</p>
+                <p style={{ fontSize:'40px', marginBottom:'14px' }}></p>
                 <p style={{ color:'#2a2a2a', fontSize:'15px' }}>Share your QR to start receiving tips</p>
               </div>
             ) : (

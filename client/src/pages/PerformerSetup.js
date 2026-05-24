@@ -108,7 +108,7 @@ export default function PerformerSetup() {
             <div style={{ display:'flex', gap:'10px', marginTop:'8px' }}>
               <button onClick={() => setStep(1)} style={{ flex:1, padding:'20px', background:'rgba(255,255,255,0.04)', border:'1px solid #1a1a1a', borderRadius:'16px', color:'#555', fontSize:'16px' }}>← Back</button>
               <button onClick={submit} disabled={loading} style={{ flex:2, background: loading ? '#1a1a1a' : 'linear-gradient(135deg,#f9a825,#ff6f00)', color: loading ? '#444' : '#fff', border:'none', padding:'20px', borderRadius:'16px', fontSize:'17px', fontWeight:'700', boxShadow: loading ? 'none' : '0 8px 32px rgba(249,168,37,0.2)' }}>
-                {loading ? 'Going live...' : '🎤 Go Live'}
+                {loading ? 'Going live...' : ' Go Live'}
               </button>
             </div>
           </div>
