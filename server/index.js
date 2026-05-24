@@ -2,7 +2,8 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
-const sqlite3 = require('sqlite3').verbose();
+const low = require('lowdb');
+const FileSync = require('lowdb/adapters/FileSync');
 const { v4: uuidv4 } = require('uuid');
 
 const app = express();
@@ -12,86 +13,78 @@ const io = new Server(server, { cors: { origin: '*' } });
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 
-const db = new sqlite3.Database('./buskr.db');
+const adapter = new FileSync('db.json');
+const db = low(adapter);
 
-db.serialize(() => {
-  db.run(`CREATE TABLE IF NOT EXISTS performers (
-    id TEXT PRIMARY KEY, name TEXT, genre TEXT, bio TEXT,
-    photo TEXT, venmo TEXT, paypal TEXT, created_at TEXT)`);
-  db.run(`CREATE TABLE IF NOT EXISTS sessions (
-    id TEXT PRIMARY KEY, performer_id TEXT, song TEXT, lat REAL, lng REAL,
-    active INTEGER DEFAULT 1, total_tips REAL DEFAULT 0, tip_count INTEGER DEFAULT 0,
-    started_at TEXT, ended_at TEXT)`);
-  db.run(`CREATE TABLE IF NOT EXISTS tips (
-    id TEXT PRIMARY KEY, session_id TEXT, performer_id TEXT,
-    name TEXT, message TEXT, amount REAL, created_at TEXT)`);
-});
+db.defaults({ performers: [], sessions: [], tips: [] }).write();
 
-const run = (sql, params=[]) => new Promise((res, rej) => db.run(sql, params, function(err) { err ? rej(err) : res(this); }));
-const get = (sql, params=[]) => new Promise((res, rej) => db.get(sql, params, (err, row) => err ? rej(err) : res(row)));
-const all = (sql, params=[]) => new Promise((res, rej) => db.all(sql, params, (err, rows) => err ? rej(err) : res(rows)));
-
-app.post('/api/performers', async (req, res) => {
+app.post('/api/performers', (req, res) => {
   const { name, genre, bio, photo, venmo, paypal } = req.body;
-  const id = uuidv4();
-  await run(`INSERT INTO performers VALUES (?,?,?,?,?,?,?,?)`, [id, name, genre, bio, photo, venmo, paypal, new Date().toISOString()]);
-  res.json({ id, name, genre, bio, photo, venmo, paypal });
+  const performer = { id: uuidv4(), name, genre, bio, photo, venmo, paypal, created_at: new Date().toISOString() };
+  db.get('performers').push(performer).write();
+  res.json(performer);
 });
 
-app.get('/api/performers/:id', async (req, res) => {
-  const p = await get('SELECT * FROM performers WHERE id=?', [req.params.id]);
+app.get('/api/performers/:id', (req, res) => {
+  const p = db.get('performers').find({ id: req.params.id }).value();
   if (!p) return res.status(404).json({ error: 'Not found' });
   res.json(p);
 });
 
-app.put('/api/performers/:id', async (req, res) => {
+app.put('/api/performers/:id', (req, res) => {
   const { name, genre, bio, photo, venmo, paypal } = req.body;
-  await run(`UPDATE performers SET name=?,genre=?,bio=?,photo=?,venmo=?,paypal=? WHERE id=?`, [name, genre, bio, photo, venmo, paypal, req.params.id]);
+  db.get('performers').find({ id: req.params.id }).assign({ name, genre, bio, photo, venmo, paypal }).write();
   res.json({ id: req.params.id, name, genre, bio, photo, venmo, paypal });
 });
 
-app.post('/api/sessions', async (req, res) => {
+app.post('/api/sessions', (req, res) => {
   const { performer_id, song, lat, lng } = req.body;
-  await run('UPDATE sessions SET active=0, ended_at=? WHERE performer_id=? AND active=1', [new Date().toISOString(), performer_id]);
-  const id = uuidv4();
-  await run(`INSERT INTO sessions VALUES (?,?,?,?,?,1,0,0,?,null)`, [id, performer_id, song, lat, lng, new Date().toISOString()]);
-  res.json({ id, performer_id, song, lat, lng });
+  db.get('sessions').filter({ performer_id, active: true }).each(s => { s.active = false; s.ended_at = new Date().toISOString(); }).write();
+  const session = { id: uuidv4(), performer_id, song, lat, lng, active: true, total_tips: 0, tip_count: 0, started_at: new Date().toISOString(), ended_at: null };
+  db.get('sessions').push(session).write();
+  res.json(session);
 });
 
-app.get('/api/sessions/active', async (req, res) => {
-  const sessions = await all(`SELECT s.*, p.name, p.genre, p.photo FROM sessions s JOIN performers p ON s.performer_id=p.id WHERE s.active=1`);
-  res.json(sessions);
+app.get('/api/sessions/active', (req, res) => {
+  const sessions = db.get('sessions').filter({ active: true }).value();
+  const result = sessions.map(s => {
+    const performer = db.get('performers').find({ id: s.performer_id }).value();
+    return { ...s, name: performer?.name, genre: performer?.genre, photo: performer?.photo };
+  });
+  res.json(result);
 });
 
-app.get('/api/sessions/:id', async (req, res) => {
-  const s = await get('SELECT * FROM sessions WHERE id=?', [req.params.id]);
+app.get('/api/sessions/:id', (req, res) => {
+  const s = db.get('sessions').find({ id: req.params.id }).value();
   if (!s) return res.status(404).json({ error: 'Not found' });
   res.json(s);
 });
 
-app.post('/api/sessions/:id/end', async (req, res) => {
-  await run('UPDATE sessions SET active=0, ended_at=? WHERE id=?', [new Date().toISOString(), req.params.id]);
+app.post('/api/sessions/:id/end', (req, res) => {
+  db.get('sessions').find({ id: req.params.id }).assign({ active: false, ended_at: new Date().toISOString() }).write();
   io.emit('session_ended', { session_id: req.params.id });
   res.json({ success: true });
 });
 
-app.get('/api/performers/:id/session', async (req, res) => {
-  const s = await get('SELECT * FROM sessions WHERE performer_id=? AND active=1', [req.params.id]);
+app.get('/api/performers/:id/session', (req, res) => {
+  const s = db.get('sessions').find({ performer_id: req.params.id, active: true }).value();
   res.json(s || null);
 });
 
-app.post('/api/tips', async (req, res) => {
+app.post('/api/tips', (req, res) => {
   const { session_id, performer_id, name, message, amount } = req.body;
-  const id = uuidv4();
-  const tip = { id, session_id, performer_id, name: name || 'Anonymous', message: message || '', amount, created_at: new Date().toISOString() };
-  await run(`INSERT INTO tips VALUES (?,?,?,?,?,?,?)`, [id, session_id, performer_id, tip.name, tip.message, amount, tip.created_at]);
-  await run('UPDATE sessions SET total_tips=total_tips+?, tip_count=tip_count+1 WHERE id=?', [amount, session_id]);
+  const tip = { id: uuidv4(), session_id, performer_id, name: name || 'Anonymous', message: message || '', amount, created_at: new Date().toISOString() };
+  db.get('tips').push(tip).write();
+  const session = db.get('sessions').find({ id: session_id }).value();
+  if (session) {
+    db.get('sessions').find({ id: session_id }).assign({ total_tips: (session.total_tips || 0) + amount, tip_count: (session.tip_count || 0) + 1 }).write();
+  }
   io.to(session_id).emit('new_tip', tip);
   res.json(tip);
 });
 
-app.get('/api/sessions/:id/tips', async (req, res) => {
-  const tips = await all('SELECT * FROM tips WHERE session_id=? ORDER BY created_at DESC', [req.params.id]);
+app.get('/api/sessions/:id/tips', (req, res) => {
+  const tips = db.get('tips').filter({ session_id: req.params.id }).sortBy('created_at').reverse().value();
   res.json(tips);
 });
 
