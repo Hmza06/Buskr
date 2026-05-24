@@ -88,8 +88,31 @@ app.get('/api/sessions/:id/tips', (req, res) => {
   res.json(tips);
 });
 
+const sessionViewers = {};
+
 io.on('connection', socket => {
-  socket.on('join_session', session_id => socket.join(session_id));
+  socket.on('join_session', session_id => {
+    socket.join(session_id);
+  });
+
+  socket.on('viewer_join', session_id => {
+    socket.join(session_id);
+    socket.session_id = session_id;
+    sessionViewers[session_id] = (sessionViewers[session_id] || 0) + 1;
+    io.to(session_id).emit('viewer_count', sessionViewers[session_id]);
+  });
+
+  socket.on('reaction', ({ session_id, emoji }) => {
+    io.to(session_id).emit('reaction_broadcast', { emoji });
+  });
+
+  socket.on('disconnect', () => {
+    if (socket.session_id) {
+      const sid = socket.session_id;
+      sessionViewers[sid] = Math.max(0, (sessionViewers[sid] || 1) - 1);
+      io.to(sid).emit('viewer_count', sessionViewers[sid]);
+    }
+  });
 });
 
 const PORT = process.env.PORT || 4000;
