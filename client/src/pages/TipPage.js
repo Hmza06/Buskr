@@ -38,7 +38,7 @@ export default function TipPage() {
       setTimeout(() => setFloatingReactions(prev => prev.filter(r => r.id !== id)), 2500);
     });
     return () => socketRef.current?.disconnect();
-  }, [session?.id]);
+  }, [session]);
 
   const sendReaction = (emoji) => {
     if (!session) return;

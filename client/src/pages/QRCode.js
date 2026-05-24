@@ -6,7 +6,7 @@ export default function QRCode({ url }) {
 
   const print = () => {
     const w = window.open('', '_blank');
-    w.document.write(`<html><head><title>Ovatio QR</title><style>body{margin:0;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;background:white;font-family:-apple-system,sans-serif;}img{width:280px;height:280px;}h2{margin-top:20px;font-size:24px;letter-spacing:-1px;}p{color:#999;font-size:13px;margin-top:8px;letter-spacing:0.05em;text-transform:uppercase;}</style></head><body><img src="${imgSrc}"/><h2>Tip me on Ovatio</h2><p>Scan to tip — no app needed</p><script>window.onload=()=>{window.print();window.close();}<\/script></body></html>`);
+    w.document.write(`<html><head><title>Ovatio QR</title><style>body{margin:0;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;background:white;font-family:-apple-system,sans-serif;}img{width:280px;height:280px;}h2{margin-top:20px;font-size:24px;letter-spacing:-1px;}p{color:#999;font-size:13px;margin-top:8px;letter-spacing:0.05em;text-transform:uppercase;}</style></head><body><img src="${imgSrc}"/><h2>Tip me on Ovatio</h2><p>Scan to tip — no app needed</p><script>window.onload=()=>{window.print();window.close();}</script></body></html>`);
     w.document.close();
   };
 
